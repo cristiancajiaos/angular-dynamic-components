@@ -1,4 +1,6 @@
-import { Component, OnInit, Type } from '@angular/core';
+import { InsertionDirective } from './insertion.directive';
+import { Component, OnInit, Type, ComponentRef, ViewChild, ComponentFactoryResolver, ViewContainerRef, ChangeDetectorRef } from '@angular/core';
+import { Subject } from 'rxjs';
 
 @Component({
   selector: 'app-dialog',
@@ -7,17 +9,38 @@ import { Component, OnInit, Type } from '@angular/core';
 })
 export class DialogComponent implements OnInit {
 
-  childComponentType: Type<any>;
+  private readonly _onClose = new Subject<any>();
 
-  constructor() { }
+  public componentRef: ComponentRef<any>;
+  public childComponentType: Type<any>;
+  public onClose = this._onClose.asObservable();
+
+  @ViewChild(InsertionDirective) insertionPoint: InsertionDirective;
+
+  constructor(
+    private componentFactoryResolver: ComponentFactoryResolver,
+    private cd: ChangeDetectorRef
+  ) { }
 
   ngOnInit(): void {
   }
 
   ngAfterViewInit() {
+    this.loadChildComponent(this.childComponentType);
+    this.cd.detectChanges();
   }
 
   ngOnDestroy() {
+    if (this.componentRef) {
+      this.componentRef.destroy();
+    }
+  }
+
+  loadChildComponent(componentType: Type<any>) {
+    let componentFactory = this.componentFactoryResolver.resolveComponentFactory(componentType);
+    let viewContainerRef = this.insertionPoint.viewContainerRef;
+    viewContainerRef.clear();
+    this.componentRef = viewContainerRef.createComponent(componentFactory);
   }
 
   onOverlayClicked(evt: MouseEvent) {
@@ -25,6 +48,6 @@ export class DialogComponent implements OnInit {
   }
 
   onDialogClicked(evt: MouseEvent) {
-    console.log('onDialogClicked()');
+    evt.stopPropagation();
   }
 }
